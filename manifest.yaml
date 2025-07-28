@@ -1,0 +1,9 @@
+name: deerhide_docker_svn_server
+tags: 
+  - latest
+registry: ghcr.io/deerhide/deerhide_docker_svn_server
+build:
+  format: oci
+  args:
+    - APP_UID=1000
+    - UBUNTU_VERSION=24.04
