@@ -90,10 +90,11 @@ build:
 
 ```bash
 # Connect to GitHub Container Registry
-docker login ghcr.io -u your-username
+# Use the provided script for docker:
+./scripts/login_docker.sh
 
-# Or with skopeo
-skopeo login ghcr.io
+# Or for skopeo:
+./scripts/login_skopeo.sh
 ```
 
 ### 3. Image Building
