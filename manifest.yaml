@@ -1,7 +1,7 @@
-name: deerhide_docker_svn_server
+name: svn_server_docker
 tags: 
   - latest
-registry: ghcr.io/deerhide/deerhide_docker_svn_server
+registry: ghcr.io/deerhide/svn_server_docker
 build:
   format: oci
   args:

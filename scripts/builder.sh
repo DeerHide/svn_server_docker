@@ -49,11 +49,11 @@ hadolint_validate(){
     local hadolint_exit_code
     log_info "Validating Dockerfile with hadolint"
     ${CLI} pull -q ghcr.io/hadolint/hadolint:latest > /dev/null
-    log_trace "$(${CLI} run --rm -i ghcr.io/hadolint/hadolint:latest hadolint -v)"
+    log_trace "$(${CLI} run --rm -i hadolint/hadolint:latest hadolint -v)"
 
     set +e
     hadolint_exec=$(
-        ${CLI} run --rm -i ghcr.io/hadolint/hadolint:latest < Containerfile \
+        ${CLI} run --rm -i hadolint/hadolint:latest < Containerfile \
             2>&1
     )
     hadolint_exit_code=$?
@@ -222,7 +222,7 @@ log_trace "IMAGE_TAG: ${IMAGE_TAG}"
 log_trace "IMAGE_FORMAT: ${IMAGE_FORMAT}"
 
 
-# hadolint_validate # Validate/Lint Containerfile
+hadolint_validate # Validate/Lint Containerfile
 buildah_build # Build Containerfile
 
 if [[ $CLI == "podman" ]]; then

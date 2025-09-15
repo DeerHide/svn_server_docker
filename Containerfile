@@ -1,34 +1,31 @@
-ARG UBUNTU_VERSION=24.04
+FROM ubuntu:24.04
 
-FROM docker.io/library/ubuntu:$UBUNTU_VERSION as base
+ARG HOME_DIR=/home/svn
 
-ARG APP_UID=1000
-ARG APP_HOME=/home/appuser
+LABEL org.opencontainers.image.source=https://github.com/Deerhide/Docker-SVN-Server
 
-LABEL org.opencontainers.image.source=https://github.com/Deerhide/deerhide_docker_svn_server
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends subversion=1.14.3-1build4 adduser=3.137ubuntu1 perl=5.38.2-3.2ubuntu0.2 && \
+    addgroup svn --system && \
+    adduser svn --system --home /home/svn --no-create-home --ingroup svn && \
+    deluser --remove-home ubuntu && \
+    mkdir -p ${HOME_DIR} && \
+    mkdir -p /etc/subversion && \
+    mkdir -p /var/log/svn && \
+    chown -R svn:svn ${HOME_DIR} && \
+    chown -R svn:svn /var/log/svn && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Setup the non-root user
-RUN userdel --remove ubuntu \
-    && useradd \
-      --no-log-init \
-      --uid $APP_UID \
-      --home-dir ${APP_HOME} \
-      --create-home \
-      --user-group \
-      appuser && \
-    chown -R appuser:appuser ${APP_HOME}
+COPY subversion/svnserve.conf /etc/subversion/svnserve.conf
+COPY subversion/passwd /etc/subversion/passwd
 
-# Update and upgrade the system
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get autoremove -y \
-    && apt-get autoclean -y
+RUN chmod o-r /etc/subversion/svnserve.conf && \
+    chmod o-r /etc/subversion/passwd && \
+    chown -R svn:svn /etc/subversion
 
-FROM base as runtime
+USER svn
 
-USER ${APP_UID}
-WORKDIR ${APP_HOME}
+EXPOSE 3690
 
-CMD ["/bin/bash -c 'while true; do sleep 1; done'"]
+CMD ["/usr/bin/svnserve", "-d", "--foreground", "-r", "/home/svn", "--listen-port", "3690", "--log-file=/var/log/svn/svnserve.log"]
