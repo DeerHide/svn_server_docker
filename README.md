@@ -205,6 +205,8 @@ user1 = another_password
 - **Environment**: Pre-configured SVN repository settings
 - **Build**: Uses local Containerfile for development
 
+**Note**: The `./data` directory will be created with correct permissions (1000:1000) automatically by the launch script.
+
 **Development Commands:**
 ```bash
 # Start development environment
@@ -311,6 +313,29 @@ SVN Client → Port 3690 → svnserve → Repositories in /home/svn
 - **Volume Mounts**: Automatic permission correction for mounted volumes
 - **User Consistency**: UID/GID 1000:1000 matches common host user permissions
 - **Security**: Non-root user with restricted access to configuration files
+
+### Volume Mount Requirements
+
+When mounting volumes to `/home/svn`, ensure the host directory has correct permissions:
+
+```bash
+# Create directory with correct ownership
+sudo mkdir -p /path/to/svn-data
+sudo chown -R 1000:1000 /path/to/svn-data
+sudo chmod -R 755 /path/to/svn-data
+
+# Or using Ansible
+- name: Create SVN data directory
+  ansible.builtin.file:
+    name: path/to/data
+    state: directory
+    mode: "755"
+    owner: "1000"
+    group: "1000"
+    recurse: true
+```
+
+**Important**: The container runs as UID:GID 1000:1000, so mounted volumes must have matching ownership to avoid permission issues.
 
 ## 📝 License
 
