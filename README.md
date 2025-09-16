@@ -53,16 +53,19 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends subversion=1.14.3-1build4
 ```
 
-### 4. Secure User Creation
+### 4. Secure User and Group Management
 ```dockerfile
-addgroup svn --system && \
-adduser svn --system --home /home/svn --no-create-home --ingroup svn
+# Remove default ubuntu user and reuse its UID/GID
+deluser --remove-home ubuntu && \
+addgroup --system --gid ${APP_GID} svn && \
+adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup svn svn
 ```
 
 ### 5. Permission Configuration
-- Removal of default ubuntu user
-- Appropriate permissions assignment to `/home/svn` directory
-- Configuration files security hardening
+- **User Management**: Reuses UID/GID 1000 from removed ubuntu user
+- **Directory Permissions**: `/home/svn` with 755 permissions (svn:svn ownership)
+- **Security Hardening**: Configuration files with restricted access
+- **Bash Configuration**: Custom shell setup for svn user
 
 ## 📋 Prerequisites
 
@@ -129,8 +132,17 @@ docker run -d \
 
 ### With Docker Compose
 
+The project includes a `docker-compose.yaml` file for easy testing and development:
+
 ```bash
+# Start the SVN server
 docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the server
+docker-compose down
 ```
 
 ### Custom Configuration
@@ -185,6 +197,32 @@ user1 = another_password
 
 ## 🔧 Development
 
+### Development and Testing
+
+**Docker Compose Configuration:**
+- **Port**: 3690 (SVN protocol)
+- **Volume**: `./data:/home/svn` (persistent storage)
+- **Environment**: Pre-configured SVN repository settings
+- **Build**: Uses local Containerfile for development
+
+**Development Commands:**
+```bash
+# Start development environment
+docker-compose up -d
+
+# Check container status
+docker-compose ps
+
+# View real-time logs
+docker-compose logs -f svn
+
+# Access container shell
+docker-compose exec svn bash
+
+# Stop and clean up
+docker-compose down
+```
+
 ### Adding Users
 
 1. Modify the `subversion/passwd` file
@@ -218,14 +256,26 @@ docker exec svn-server cat /var/log/svn/svnserve.log
 
 ## 🚀 Production Deployment
 
+### Build Arguments
+
+```bash
+# User UID (default: 1000)
+APP_UID=1000
+
+# Group GID (default: 1000) 
+APP_GID=1000
+
+# Ubuntu version (default: 24.04)
+UBUNTU_VERSION=24.04
+```
+
 ### Recommended Environment Variables
 
 ```bash
-# User UID (optional)
-APP_UID=1000
-
-# Ubuntu version (optional)
-UBUNTU_VERSION=24.04
+# SVN Repository Configuration
+SVN_REPO_NAME=my_repo
+SVN_REPO_PATH=/home/svn/${SVN_REPO_NAME}
+SVN_REPO_URL=file://${SVN_REPO_PATH}
 ```
 
 ### Recommended Resources
@@ -252,8 +302,15 @@ SVN Client → Port 3690 → svnserve → Repositories in /home/svn
 ### Repository Management
 
 - **Location**: All repositories are stored in `/home/svn`
-- **Permissions**: Owner `svn:svn` with read/write access
+- **Permissions**: Owner `svn:svn` (UID:GID 1000:1000) with 755 permissions
 - **Persistence**: Use Docker volumes for data persistence
+- **User Management**: Reuses UID/GID from removed ubuntu user for consistency
+
+### Permission Handling
+
+- **Volume Mounts**: Automatic permission correction for mounted volumes
+- **User Consistency**: UID/GID 1000:1000 matches common host user permissions
+- **Security**: Non-root user with restricted access to configuration files
 
 ## 📝 License
 
