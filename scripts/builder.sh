@@ -88,6 +88,8 @@ buildah_build(){
     for target in $(yq e '.build.targets[].name' $MANIFEST_FILE); do
         OS=$(yq e ".build.targets[] | select(.name == \"$target\") | .os" $MANIFEST_FILE)
         ARCH=$(yq e ".build.targets[] | select(.name == \"$target\") | .arch" $MANIFEST_FILE)
+        # TODO: Review this to add annotations
+        ANNOTATIONS=$(yq e ".build.targets[] | select(.name == \"$target\") | .annotations" $MANIFEST_FILE)
 
         log_info "👉 Building image for ${ARCH}"
 
@@ -100,7 +102,7 @@ buildah_build(){
                 --pull-always \
                 --format ${IMAGE_FORMAT} \
                 ${buildah_args} \
-                --tag docker-daemon:${IMAGE_NAME}-${ARCH}:${IMAGE_TAG} \
+                --tag docker-daemon:${IMAGE_NAME}-${ARCH}:${IMAGE_TAG}-${ARCH} \
                 . \
                 2>&1
         )
@@ -156,7 +158,7 @@ docker_save_all_arch_to_tar() {
         docker_exec=$(
             ${CLI} save \
                 --output ${BUILD_DIR}/${IMAGE_NAME}-${arch}-${IMAGE_TAG}.tar \
-                ${IMAGE_NAME}-${arch}:${IMAGE_TAG} \
+                ${IMAGE_NAME}-${arch}:${IMAGE_TAG}-${arch} \
                 2>&1
         )
         docker_exit_code=$?
@@ -181,14 +183,14 @@ dive_scan_for_all_arch() {
     log_trace "$(dive --version)"
 
     for arch in $(yq e '.build.targets[].name' "$MANIFEST_FILE"); do
-        log_info "📦 Scanning ${IMAGE_NAME}-${arch}:${IMAGE_TAG}"
+        log_info "📦 Scanning ${IMAGE_NAME}-${arch}:${IMAGE_TAG}-${arch}"
 
         set +e
         dive_scan=$(\
             dive \
                 --ci \
                 --source="${CLI}" \
-                "${IMAGE_NAME}-${arch}:${IMAGE_TAG}" \
+                "${IMAGE_NAME}-${arch}:${IMAGE_TAG}-${arch}" \
                 2>&1 \
         )
         set -e
@@ -283,8 +285,8 @@ dive_scan_for_all_arch # Filesystem scan and analysis
 # Deploy to registry with skopeo using tags in manifest
 registry=$(retrieve_registry_from_manifest)
 for target in $(yq e '.build.targets[].name' $MANIFEST_FILE); do
-    skopeo copy docker-daemon:${IMAGE_NAME}-${target}:${IMAGE_TAG} \
-        docker://${registry}:${target}
+    skopeo copy docker-daemon:${IMAGE_NAME}-${target}:${IMAGE_TAG}-${target} \
+        docker://${registry}:${IMAGE_TAG}-${target}
 done
 
 create_multiarch_manifest
