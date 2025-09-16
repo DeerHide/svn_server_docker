@@ -1,12 +1,15 @@
 FROM ubuntu:24.04
 
+ARG APP_UID=1000
 ARG HOME_DIR=/home/svn
+
+LABEL org.opencontainers.image.description="Secure Subversion server on Ubuntu 24.04 with multi-user support."
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends subversion=1.14.3-1build4 adduser=3.137ubuntu1 perl=5.38.2-3.2ubuntu0.2 && \
-    addgroup svn --system && \
-    adduser svn --system --home /home/svn --no-create-home --ingroup svn && \
     deluser --remove-home ubuntu && \
+    addgroup svn --system && \
+    adduser --system --uid ${APP_UID} --home /home/svn --no-create-home --ingroup svn svn && \
     mkdir -p ${HOME_DIR} && \
     mkdir -p /etc/subversion && \
     mkdir -p /var/log/svn && \
