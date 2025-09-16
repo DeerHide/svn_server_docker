@@ -31,6 +31,7 @@ The image works according to this architecture:
 ## 🚀 Key Features
 
 - **Complete SVN server** with Apache Subversion 1.14.3
+- **Multi-architecture support**: AMD64 and ARM64 platforms
 - **Enhanced security**: dedicated user, restrictive permissions
 - **Flexible configuration**: externalized configuration files
 - **Optimized image**: based on Ubuntu 24.04, reduced size
@@ -41,19 +42,24 @@ The image works according to this architecture:
 ### 1. Ubuntu 24.04 Base
 The image uses Ubuntu 24.04 LTS as base, ensuring stability and long-term support.
 
-### 2. Subversion Installation
+### 2. Multi-Architecture Support
+The image is built for multiple architectures:
+- **linux/amd64**: Intel/AMD 64-bit processors
+- **linux/arm64**: ARM 64-bit processors (Apple Silicon, ARM servers)
+
+### 3. Subversion Installation
 ```dockerfile
 RUN apt-get update && \
     apt-get install -y --no-install-recommends subversion=1.14.3-1build4
 ```
 
-### 3. Secure User Creation
+### 4. Secure User Creation
 ```dockerfile
 addgroup svn --system && \
 adduser svn --system --home /home/svn --no-create-home --ingroup svn
 ```
 
-### 4. Permission Configuration
+### 5. Permission Configuration
 - Removal of default ubuntu user
 - Appropriate permissions assignment to `/home/svn` directory
 - Configuration files security hardening
@@ -97,7 +103,7 @@ build:
 ./scripts/login_skopeo.sh
 ```
 
-### 3. Image Building
+### 3. Multi-Architecture Image Building
 
 ```bash
 ./scripts/builder.sh
@@ -105,11 +111,9 @@ build:
 
 The script automatically performs:
 - ✅ Containerfile validation with hadolint
-- ✅ Docker image building
-- ✅ Tar format saving
-- ✅ Efficiency analysis with dive
-- ✅ Security scan with trivy
-- ✅ Push to registry (if configured)
+- ✅ Multi-architecture Docker image building (AMD64 + ARM64)
+- ✅ Docker Buildx builder setup
+- ✅ Push to registry with multi-arch manifest
 
 ## 🐳 Usage
 

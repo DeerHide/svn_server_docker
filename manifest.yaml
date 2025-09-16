@@ -7,3 +7,10 @@ build:
   args:
     - APP_UID=1000
     - UBUNTU_VERSION=24.04
+  targets:
+    - name: amd64
+      os: linux
+      arch: amd64
+    - name: arm64
+      os: linux
+      arch: arm64

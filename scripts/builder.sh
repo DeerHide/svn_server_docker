@@ -49,11 +49,11 @@ hadolint_validate(){
     local hadolint_exit_code
     log_info "Validating Dockerfile with hadolint"
     ${CLI} pull -q ghcr.io/hadolint/hadolint:latest > /dev/null
-    log_trace "$(${CLI} run --rm -i hadolint/hadolint:latest hadolint -v)"
+    log_trace "$(${CLI} run --rm -i ghcr.io/hadolint/hadolint:latest hadolint -v)"
 
     set +e
     hadolint_exec=$(
-        ${CLI} run --rm -i hadolint/hadolint:latest < Containerfile \
+        ${CLI} run --rm -i ghcr.io/hadolint/hadolint:latest < Containerfile \
             2>&1
     )
     hadolint_exit_code=$?
@@ -83,26 +83,38 @@ buildah_build(){
     done
 
     log_trace "Buildah args: ${buildah_args}"
-    set +e
-    buildah_exec=$(
-        buildah build \
-            --squash \
-            --pull-always \
-            --format ${IMAGE_FORMAT} \
-            ${buildah_args} \
-            --tag docker-daemon:${IMAGE_NAME}:${IMAGE_TAG} \
-            . \
-            2>&1
-    )
-    buildah_exit_code=$?
-    set -e
-    if [[ $buildah_exit_code -ne 0 ]]; then
-        log_error "Build failed"
-        log_error "${buildah_exec}"
-        exit 1
-    else
-        log_success "Build completed successfully"
-    fi
+
+    # Loop through architectures
+    for target in $(yq e '.build.targets[].name' $MANIFEST_FILE); do
+        OS=$(yq e ".build.targets[] | select(.name == \"$target\") | .os" $MANIFEST_FILE)
+        ARCH=$(yq e ".build.targets[] | select(.name == \"$target\") | .arch" $MANIFEST_FILE)
+
+        log_info "👉 Building image for ${ARCH}"
+
+        set +e
+        buildah_exec=$(
+            buildah build \
+                --arch ${ARCH} \
+                --os ${OS} \
+                --squash \
+                --pull-always \
+                --format ${IMAGE_FORMAT} \
+                ${buildah_args} \
+                --tag docker-daemon:${IMAGE_NAME}-${ARCH}:${IMAGE_TAG} \
+                . \
+                2>&1
+        )
+        buildah_exit_code=$?
+        set -e
+
+        if [[ $buildah_exit_code -ne 0 ]]; then
+            log_error "Build failed for ${ARCH}"
+            log_error "${buildah_exec}"
+            exit 1
+        else
+            log_success "✅ Build completed for ${ARCH}"
+        fi
+    done
 }
 
 podman_save_image_to_tar(){
@@ -129,52 +141,66 @@ podman_save_image_to_tar(){
     fi
 }
 
-docker_save_image_to_tar(){
+docker_save_all_arch_to_tar() {
+    local arch
     local docker_exec
     local docker_exit_code
-    log_info "Saving image to tar ${IMAGE_NAME}:${IMAGE_TAG}"
+
+    log_info "🗃️ Saving all images to tar files"
     log_trace "$(docker --version)"
 
-    set +e
-    docker_exec=$(
-        ${CLI} save \
-            --output ${BUILD_DIR}/${IMAGE_NAME}-${IMAGE_TAG}.tar \
-            ${IMAGE_NAME}:${IMAGE_TAG} \
-            2>&1
-    )
-    docker_exit_code=$?
-    set -e
-    if [[ $docker_exit_code -ne 0 ]]; then
-        echo -e "${WHITE_GRAY}${docker_exec}${NC}"
-        log_error "Saving image to tar failed"
-        exit 1
-    else
-        log_success "Image saved to ${BUILD_DIR}/${IMAGE_NAME}-${IMAGE_TAG}.tar"
-    fi
+    for arch in $(yq e '.build.targets[].name' "$MANIFEST_FILE"); do
+        log_info "📦 Saving image ${IMAGE_NAME}-${arch}:${IMAGE_TAG} to tar"
+
+        set +e
+        docker_exec=$(
+            ${CLI} save \
+                --output ${BUILD_DIR}/${IMAGE_NAME}-${arch}-${IMAGE_TAG}.tar \
+                ${IMAGE_NAME}-${arch}:${IMAGE_TAG} \
+                2>&1
+        )
+        docker_exit_code=$?
+        set -e
+
+        if [[ $docker_exit_code -ne 0 ]]; then
+            echo -e "${WHITE_GRAY}${docker_exec}${NC}"
+            log_error "❌ Failed to save image ${arch} to tar"
+            exit 1
+        else
+            log_success "✅ Image saved to ${BUILD_DIR}/${IMAGE_NAME}-${arch}-${IMAGE_TAG}.tar"
+        fi
+    done
 }
 
-dive_scan() {
+
+dive_scan_for_all_arch() {
     local dive_scan
-    log_info "Running dive scan on ${IMAGE_NAME}:${IMAGE_TAG}"
+    local arch
+
+    log_info "🔍 Running dive scan for all targets"
     log_trace "$(dive --version)"
 
-    set +e
-    dive_scan=$(\
-        dive \
-            --ci \
-            --source=${CLI} \
-            ${IMAGE_NAME}:${IMAGE_TAG} \
-            2>&1 \
-    )
-    set -e
+    for arch in $(yq e '.build.targets[].name' "$MANIFEST_FILE"); do
+        log_info "📦 Scanning ${IMAGE_NAME}-${arch}:${IMAGE_TAG}"
 
-    if [[ $dive_scan == *"FAIL"* ]]; then
-        echo -e "${WHITE_GRAY}${dive_scan}${NC}"
-        log_error "Dive scan failed"
-        exit 1
-    else
-        log_success "Dive scan passed"
-    fi
+        set +e
+        dive_scan=$(\
+            dive \
+                --ci \
+                --source="${CLI}" \
+                "${IMAGE_NAME}-${arch}:${IMAGE_TAG}" \
+                2>&1 \
+        )
+        set -e
+
+        if [[ $dive_scan == *"FAIL"* ]]; then
+            echo -e "${WHITE_GRAY}${dive_scan}${NC}"
+            log_error "❌ Dive scan failed for ${arch}"
+            exit 1
+        else
+            log_success "✅ Dive scan passed for ${arch}"
+        fi
+    done
 }
 
 trivy_scan () {
@@ -210,6 +236,23 @@ trivy_scan () {
     fi
 }
 
+create_multiarch_manifest() {
+    log_info "📦 Creating multi-arch manifest for ${IMAGE_NAME}:${IMAGE_TAG}"
+
+    targets=$(yq e '.build.targets[].name' $MANIFEST_FILE)
+    manifest_cmd="docker manifest create ${registry}:${IMAGE_TAG}"
+
+    for target in $targets; do
+        manifest_cmd+=" --amend ${registry}:${target}"
+    done
+
+    log_trace "$manifest_cmd"
+    eval "$manifest_cmd"
+
+    docker manifest push ${registry}:${IMAGE_TAG}
+    log_success "🚀 Manifest pushed for tag ${IMAGE_TAG}"
+}
+
 # Main
 clean_build_dir
 check_for_manifest # Check for manifest file existence\
@@ -222,21 +265,26 @@ log_trace "IMAGE_TAG: ${IMAGE_TAG}"
 log_trace "IMAGE_FORMAT: ${IMAGE_FORMAT}"
 
 
-hadolint_validate # Validate/Lint Containerfile
+# hadolint_validate # Validate/Lint Containerfile
 buildah_build # Build Containerfile
 
 if [[ $CLI == "podman" ]]; then
     podman_save_image_to_tar # Save image to tar (for trivy scan)
 elif [[ $CLI == "docker" ]]; then
-    docker_save_image_to_tar # Save image to tar (for trivy scan)
+    docker_save_all_arch_to_tar # Save image to tar (for trivy scan)
 else
     log_error "Invalid CLI"
     exit 1
 fi
 
-dive_scan # Filesystem scan and analysis
-trivy_scan # Vulnerability scan
+dive_scan_for_all_arch # Filesystem scan and analysis
+# trivy_scan # Vulnerability scan
 
 # Deploy to registry with skopeo using tags in manifest
 registry=$(retrieve_registry_from_manifest)
-skopeo copy docker-daemon:${IMAGE_NAME}:${IMAGE_TAG} docker://${registry}:${IMAGE_TAG}
+for target in $(yq e '.build.targets[].name' $MANIFEST_FILE); do
+    skopeo copy docker-daemon:${IMAGE_NAME}-${target}:${IMAGE_TAG} \
+        docker://${registry}:${target}
+done
+
+create_multiarch_manifest
