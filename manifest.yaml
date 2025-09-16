@@ -2,6 +2,14 @@ name: svn_server_docker
 tags: 
   - latest
 registry: ghcr.io/deerhide/svn_server_docker
+annotations:
+  org.opencontainers.image.source: https://github.com/DeerHide/svn_server_docker
+  org.opencontainers.image.description: "Secure Subversion server container with multi-architecture support. Includes Apache Subversion 1.14.3 on Ubuntu 24.04 LTS with enhanced security features and multi-user support."
+  org.opencontainers.image.vendor: "Deerhide"
+  org.opencontainers.image.title: "SVN Server - Multi-Architecture"
+  org.opencontainers.image.url: https://github.com/DeerHide/svn_server_docker#readme
+  org.opencontainers.image.documentation: https://github.com/DeerHide/svn_server_docker/blob/main/README.md
+  org.opencontainers.image.licenses: MIT
 build:
   format: oci
   args:
@@ -12,21 +20,7 @@ build:
       os: linux
       arch: amd64
       description: "Intel/AMD x86_64 architecture - Optimized for traditional servers and workstations"
-      annotations:
-        org.opencontainers.image.source: https://github.com/DeerHide/svn_server_docker
-        org.opencontainers.image.description: "Secure Subversion server container optimized for Intel/AMD x86_64 processors. Includes Apache Subversion 1.14.3 on Ubuntu 24.04 LTS with enhanced security features and multi-user support."
-        org.opencontainers.image.vendor: "Deerhide"
-        org.opencontainers.image.title: "SVN Server - x86_64 (AMD64)"
-        org.opencontainers.image.architecture: "amd64"
-        org.opencontainers.image.os: "linux"
     - name: arm64
       os: linux
       arch: arm64
       description: "ARM64 architecture - Optimized for Apple Silicon Macs and ARM-based servers"
-      annotations:
-        org.opencontainers.image.source: https://github.com/DeerHide/svn_server_docker
-        org.opencontainers.image.description: "Secure Subversion server container optimized for ARM64 processors including Apple Silicon (M1/M2/M3) and ARM-based servers. Includes Apache Subversion 1.14.3 on Ubuntu 24.04 LTS with enhanced security features and multi-user support."
-        org.opencontainers.image.vendor: "Deerhide"
-        org.opencontainers.image.title: "SVN Server - ARM64 (aarch64)"
-        org.opencontainers.image.architecture: "arm64"
-        org.opencontainers.image.os: "linux"
