@@ -94,7 +94,7 @@ fi
 # Populate authorized_keys from environment variables if provided
 sanitize_keys() {
   # Remove CRs, trim whitespace
-  sed -e 's/\r$//' -e 's/^\s\+//' -e 's/\s\+$//' | sed '/^$/d'
+  sed -e 's/\r$//' -e 's/^[[:space:]]\+//' -e 's/[[:space:]]\+$//' | sed '/^$/d'
 }
 
 AUTH_KEYS_FILE="$HOME_DIR/.ssh/authorized_keys"
