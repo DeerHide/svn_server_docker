@@ -6,6 +6,16 @@ set -euo pipefail
 mkdir -p /run/sshd /var/log/svn
 chmod 755 /run/sshd /var/log/svn || true
 
+# Ensure SSH host keys exist (per-container) and have secure permissions
+HOST_KEY_DIR="/etc/ssh"
+if ! ls ${HOST_KEY_DIR}/ssh_host_*_key >/dev/null 2>&1; then
+  ssh-keygen -A
+fi
+# Enforce secure ownership and permissions
+chown root:root ${HOST_KEY_DIR}/ssh_host_*_key* 2>/dev/null || true
+chmod 600 ${HOST_KEY_DIR}/ssh_host_*_key 2>/dev/null || true
+chmod 644 ${HOST_KEY_DIR}/ssh_host_*_key.pub 2>/dev/null || true
+
 # Ensure the svn account is unlocked (some base images/system users are locked by default)
 if passwd -S svn 2>/dev/null | grep -q " L "; then
   usermod -U svn || true
