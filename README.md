@@ -10,7 +10,7 @@ This Docker image provides a complete and secure SVN server ready for production
 
 The image works according to this architecture:
 
-```
+```text
 ┌───────────────────────────────────────┐
 │           Docker Container            │
 │  ┌──────────────────────────────────┐ │
@@ -40,20 +40,25 @@ The image works according to this architecture:
 ## 🏗️ How the image is built
 
 ### 1. Ubuntu 24.04 Base
+
 The image uses Ubuntu 24.04 LTS as base, ensuring stability and long-term support.
 
 ### 2. Multi-Architecture Support
+
 The image is built for multiple architectures:
+
 - **linux/amd64**: Intel/AMD 64-bit processors
 - **linux/arm64**: ARM 64-bit processors (Apple Silicon, ARM servers)
 
 ### 3. Subversion Installation
+
 ```dockerfile
 RUN apt-get update && \
     apt-get install -y --no-install-recommends subversion=1.14.3-1build4
 ```
 
 ### 4. Secure User and Group Management
+
 ```dockerfile
 # Remove default ubuntu user and reuse its UID/GID
 deluser --remove-home ubuntu && \
@@ -62,6 +67,7 @@ adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup 
 ```
 
 ### 5. Permission Configuration
+
 - **User Management**: Reuses UID/GID 1000 from removed ubuntu user
 - **Directory Permissions**: `/home/svn` with 755 permissions (svn:svn ownership)
 - **Security Hardening**: Configuration files with restricted access
@@ -70,9 +76,11 @@ adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup 
 ## 📋 Prerequisites
 
 ### Docker Installation
+
 [See Docker documentation](https://docs.docker.com/get-docker/)
 
 ### Development Tools Installation
+
 ```bash
 ./scripts/install_tools.sh
 ```
@@ -112,11 +120,20 @@ build:
 ./scripts/builder.sh
 ```
 
-The script automatically performs:
-- ✅ Containerfile validation with hadolint
-- ✅ Multi-architecture Docker image building (AMD64 + ARM64)
-- ✅ Docker Buildx builder setup
-- ✅ Push to registry with multi-arch manifest
+The script performs:
+
+- ✅ Multi-architecture image builds using Buildah (AMD64 + ARM64)
+- ✅ Saves per-arch images as tar archives for analysis
+- ✅ Filesystem efficiency scans with Dive for each architecture
+- ✅ Pushes per-arch images to the registry with Skopeo
+- ✅ Creates and pushes a multi-arch manifest (Docker manifest)
+
+Notes:
+
+- Hadolint validation is available but disabled by default in the script
+  (uncomment in `scripts/builder.sh` to enable).
+- Trivy vulnerability scanning is installed via `./scripts/install_tools.sh` but
+  disabled by default in the build script (uncomment to enable).
 
 ## 🐳 Usage
 
@@ -158,7 +175,7 @@ docker run -d \
 
 ## 📁 Project Structure
 
-```
+```text
 svn_server_docker/
 ├── Containerfile              # Docker image definition
 ├── manifest.yaml              # Build configuration
@@ -200,14 +217,16 @@ user1 = another_password
 ### Development and Testing
 
 **Docker Compose Configuration:**
+
 - **Port**: 3690 (SVN protocol)
 - **Volume**: `./data:/home/svn` (persistent storage)
 - **Environment**: Pre-configured SVN repository settings
-- **Build**: Uses local Containerfile for development
+- **Build**: Uses local `Containerfile` for development
 
-**Note**: The `./data` directory will be created with correct permissions (1000:1000) automatically by the launch script.
+**Note**: The `./data` directory can be prepared automatically with correct permissions (1000:1000) by running `./scripts/launch.sh`.
 
 **Development Commands:**
+
 ```bash
 # Start development environment
 docker-compose up -d
@@ -260,11 +279,13 @@ docker exec svn-server cat /var/log/svn/svnserve.log
 
 ### Build Arguments
 
+Build arguments are defined in `manifest.yaml` and passed by the builder script:
+
 ```bash
 # User UID (default: 1000)
 APP_UID=1000
 
-# Group GID (default: 1000) 
+# Group GID (default: 1000)
 APP_GID=1000
 
 # Ubuntu version (default: 24.04)
@@ -297,7 +318,7 @@ SVN_REPO_URL=file://${SVN_REPO_PATH}
 
 ### Data Flow
 
-```
+```text
 SVN Client → Port 3690 → svnserve → Repositories in /home/svn
 ```
 
@@ -344,6 +365,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to:
+
 1. Fork the project
 2. Create a branch for your feature
 3. Commit your changes
@@ -353,6 +375,7 @@ Contributions are welcome! Feel free to:
 ## 📞 Support
 
 For any questions or issues:
+
 - Open an issue on GitHub
 - Check Subversion documentation
 - Check container logs
