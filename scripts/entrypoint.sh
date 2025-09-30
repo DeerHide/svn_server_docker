@@ -51,4 +51,4 @@ chmod 600 "$AUTH_KEYS_FILE" && chown svn:svn "$AUTH_KEYS_FILE"
 /usr/sbin/sshd -D -e &
 
 # Start svnserve in foreground via tini
-exec /usr/bin/svnserve -d --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log
+exec /usr/bin/svnserve --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log
