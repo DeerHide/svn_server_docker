@@ -7,7 +7,7 @@ ARG HOME_DIR=/home/svn
 LABEL org.opencontainers.image.description="Secure Subversion server on Ubuntu 24.04 with multi-user support."
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends subversion=1.14.3-1build4 adduser=3.137ubuntu1 perl=5.38.2-3.2ubuntu0.2 openssh-server iproute2 tini && \
+    apt-get install -y --no-install-recommends subversion adduser perl openssh-server iproute2 tini && \
     deluser --remove-home ubuntu || true && \
     addgroup --system --gid ${APP_GID} svn && \
     adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup svn svn && \
