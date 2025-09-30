@@ -9,7 +9,6 @@ services:
       - ./svn_data:/home/svn
       - ./svn_config:/etc/subversion
     environment:
-      # From .env (auto-loaded by docker compose)
       # Optional: override home directory inside container
       - HOME_DIR=${HOME_DIR}
     healthcheck:
