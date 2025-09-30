@@ -22,9 +22,9 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY subversion/svnserve.conf /etc/subversion/svnserve.conf
-COPY subversion/passwd /etc/subversion/passwd
-COPY config/sshd_config /etc/ssh/sshd_config
+COPY src/subversion/svnserve.conf /etc/subversion/svnserve.conf
+COPY src/subversion/passwd /etc/subversion/passwd
+COPY src/ssh/sshd_config /etc/ssh/sshd_config
 
 
 RUN chmod o-r /etc/subversion/svnserve.conf && \
