@@ -22,6 +22,10 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Stash default Subversion configs for first-run seeding and also place them in /etc/subversion
+RUN mkdir -p /usr/local/share/subversion-defaults
+COPY src/subversion/svnserve.conf /usr/local/share/subversion-defaults/svnserve.conf
+COPY src/subversion/passwd /usr/local/share/subversion-defaults/passwd
 COPY src/subversion/svnserve.conf /etc/subversion/svnserve.conf
 COPY src/subversion/passwd /etc/subversion/passwd
 COPY src/ssh/sshd_config /etc/ssh/sshd_config
