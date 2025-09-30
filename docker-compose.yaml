@@ -5,9 +5,20 @@ services:
       dockerfile: Containerfile
     ports:
       - 3690:3690
+      - 2222:22
     volumes:
-      - ./data:/home/svn
+      - ./svn_data:/home/svn
+      - ./svn_config:/etc/subversion
     environment:
       - SVN_REPO_NAME=my_repo
       - SVN_REPO_PATH=/home/svn/${SVN_REPO_NAME}
       - SVN_REPO_URL=file://${SVN_REPO_PATH}
+      # Prefer YAML block scalar to preserve long lines and avoid wrapping
+      - |
+        SSH_AUTHORIZED_KEYS=ssh-ed25519 AAAAC3... svn@anna
+        ssh-ed25519 AAAAC3... svn2@anna2
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
