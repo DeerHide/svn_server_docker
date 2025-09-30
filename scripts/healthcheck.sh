@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-check_port() {
+is_listening() {
   local port="$1"
-  (echo > "/dev/tcp/127.0.0.1/${port}") >/dev/null 2>&1
+  ss -ltn | awk '{print $4}' | grep -qE ":(^|.*:)${port}$"
 }
 
 # Check svnserve listening
-if ! check_port 3690; then
-  echo "svnserve not responding on 3690" >&2
+if ! is_listening 3690; then
+  echo "svnserve not listening on 3690" >&2
   exit 1
 fi
 
 # Check sshd listening
-if ! check_port 22; then
-  echo "sshd not responding on 22" >&2
+if ! is_listening 22; then
+  echo "sshd not listening on 22" >&2
   exit 1
 fi
 
 exit 0
-
-
