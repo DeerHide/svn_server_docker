@@ -16,11 +16,6 @@ chown root:root ${HOST_KEY_DIR}/ssh_host_*_key* 2>/dev/null || true
 chmod 600 ${HOST_KEY_DIR}/ssh_host_*_key 2>/dev/null || true
 chmod 644 ${HOST_KEY_DIR}/ssh_host_*_key.pub 2>/dev/null || true
 
-# Ensure the svn account is unlocked (some base images/system users are locked by default)
-if passwd -S svn 2>/dev/null | grep -q " L "; then
-  usermod -U svn || true
-  passwd -u svn || true
-fi
 
 # Ensure home and ssh dir perms
 HOME_DIR=${HOME_DIR:-/home/svn}

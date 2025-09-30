@@ -34,7 +34,6 @@ COPY src/ssh/sshd_config /etc/ssh/sshd_config
 RUN chmod o-r /etc/subversion/svnserve.conf && \
     chmod o-r /etc/subversion/passwd && \
     chown -R svn:svn /etc/subversion && \
-    usermod -U svn && \
     usermod -s /bin/bash svn && \
     echo 'export PS1="svn@svn-server:\\w$ "' >> ${HOME_DIR}/.bashrc && \
     chmod 644 ${HOME_DIR}/.bashrc && \
