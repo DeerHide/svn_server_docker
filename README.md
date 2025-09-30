@@ -248,7 +248,6 @@ admin = password123
 user1 = another_password
 ```
 
-
 ## 🔧 Development
 
 ### Development and Testing
