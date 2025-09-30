@@ -3,7 +3,7 @@ set -euo pipefail
 
 is_listening() {
   local port="$1"
-  ss -ltn | awk '{print $4}' | grep -qE ":(^|.*:)${port}$"
+  ss -ltn | awk '{print $4}' | grep -qE ":${port}$"
 }
 
 # Check svnserve listening
