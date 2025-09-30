@@ -3,6 +3,7 @@ tags:
   - latest
 registry: ghcr.io/deerhide/svn_server_docker
 annotations:
+  org.opencontainers.image.authors: "deerhide <hello@deerhide.com>"
   org.opencontainers.image.source: https://github.com/DeerHide/svn_server_docker
   org.opencontainers.image.description: "Secure Subversion server container with multi-architecture support. Includes Apache Subversion 1.14.3 on Ubuntu 24.04 LTS with enhanced security features and multi-user support."
   org.opencontainers.image.vendor: "Deerhide"
