@@ -5,14 +5,11 @@ services:
       dockerfile: Containerfile
     ports:
       - 3690:3690
-      - 2222:22
     volumes:
       - ./svn_data:/home/svn
       - ./svn_config:/etc/subversion
     environment:
       # From .env (auto-loaded by docker compose)
-      # Provide SSH public keys as comma-separated or with literal \n separators
-      - SSH_AUTHORIZED_KEYS=${SSH_AUTHORIZED_KEYS}
       # Optional: override home directory inside container
       - HOME_DIR=${HOME_DIR}
     healthcheck:

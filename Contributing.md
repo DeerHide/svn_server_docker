@@ -13,7 +13,6 @@
 
    ```bash
    ./scripts/install_tools.sh
-   export SSH_AUTHORIZED_KEYS="$(cat ~/.ssh/id_rsa.pub)"
    docker-compose up -d
    ```
 
@@ -27,7 +26,6 @@
    ```bash
    docker-compose up -d
    svn checkout svn://localhost:3690/hello
-   svn checkout svn+ssh://svn@localhost:2222/hello
    ```
 
 3. Commit with conventional format: `git commit -m "feat: your change"`
@@ -36,9 +34,9 @@
 ### Guidelines
 
 - **Code Style**: Follow existing patterns, use spaces for indentation
-- **Testing**: Test both SVN protocol (3690) and SSH access (2222)
+- **Testing**: Test SVN protocol (3690) access
 - **Documentation**: Update README.md for user-facing changes
-- **Security**: Review SSH config and permission handling
+- **Security**: Review configuration and permission handling
 
 ### Key Areas
 

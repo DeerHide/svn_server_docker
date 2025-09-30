@@ -5,41 +5,20 @@ echo "[entrypoint] Boot starting"
 
 # Ensure runtime dirs
 echo "[entrypoint] Ensuring runtime directories"
-mkdir -p /run/sshd /var/log/svn
-chmod 755 /run/sshd /var/log/svn || true
+mkdir -p /var/log/svn
+chmod 755 /var/log/svn || true
 echo "[entrypoint] Runtime directories ready"
 
-# Ensure SSH host keys exist (per-container) and have secure permissions
-echo "[entrypoint] Verifying SSH host keys"
-HOST_KEY_DIR="/etc/ssh"
-if ! ls ${HOST_KEY_DIR}/ssh_host_*_key >/dev/null 2>&1; then
-  echo "[entrypoint] SSH host keys missing; generating"
-  ssh-keygen -A
-else
-  echo "[entrypoint] SSH host keys already present"
-fi
-# Enforce secure ownership and permissions
-chown root:root ${HOST_KEY_DIR}/ssh_host_*_key* 2>/dev/null || true
-chmod 600 ${HOST_KEY_DIR}/ssh_host_*_key 2>/dev/null || true
-chmod 644 ${HOST_KEY_DIR}/ssh_host_*_key.pub 2>/dev/null || true
-echo "[entrypoint] SSH host key permissions set"
 
 
-# Ensure home and ssh dir perms
+# Ensure home dir perms
 HOME_DIR=${HOME_DIR:-/home/svn}
-echo "[entrypoint] Ensuring home and SSH permissions in $HOME_DIR"
+echo "[entrypoint] Ensuring home permissions in $HOME_DIR"
 if [ -d "$HOME_DIR" ]; then
   chown -R svn:svn "$HOME_DIR" || true
   chmod 755 "$HOME_DIR" || true
-  mkdir -p "$HOME_DIR/.ssh"
-  chown -R svn:svn "$HOME_DIR/.ssh"
-  chmod 700 "$HOME_DIR/.ssh"
-  if [ -f "$HOME_DIR/.ssh/authorized_keys" ]; then
-    chown svn:svn "$HOME_DIR/.ssh/authorized_keys"
-    chmod 600 "$HOME_DIR/.ssh/authorized_keys"
-  fi
 fi
-echo "[entrypoint] Home and SSH permissions ensured"
+echo "[entrypoint] Home permissions ensured"
 
 # Seed global Subversion configs into /etc/subversion if bind mount is empty
 echo "[entrypoint] Checking Subversion configuration"
@@ -91,48 +70,22 @@ svn = svn
 EOF
 fi
 
-# Populate authorized_keys from environment variables if provided
-sanitize_keys() {
-  # Remove CRs, trim whitespace
-  sed -e 's/\r$//' -e 's/^[[:space:]]\+//' -e 's/[[:space:]]\+$//' | sed '/^$/d'
-}
-
-AUTH_KEYS_FILE="$HOME_DIR/.ssh/authorized_keys"
-# Always overwrite with env-provided keys only
-if [ -n "${SSH_AUTHORIZED_KEYS:-}" ]; then
-  # Support newline-separated and literal \n-separated keys without corrupting characters
-  printf "%s" "$SSH_AUTHORIZED_KEYS" \
-    | sed 's/\\\n/\n/g' \
-    | sanitize_keys > "$AUTH_KEYS_FILE"
-else
-  # Create empty file if no keys provided so sshd can start; warn for visibility
-  : > "$AUTH_KEYS_FILE"
-  echo "[entrypoint] Warning: SSH_AUTHORIZED_KEYS is empty; no SSH logins will be allowed." >&2
-fi
-chmod 600 "$AUTH_KEYS_FILE" && chown svn:svn "$AUTH_KEYS_FILE"
-
-# Start sshd (key-only per config)
-echo "[entrypoint] Starting sshd"
-/usr/sbin/sshd -D -e &
-SSHD_PID=$!
 
 echo "[entrypoint] Starting svnserve"
 # Start svnserve in daemon mode but stay in foreground (required: one of -d|-i|-t|-X)
 /usr/bin/svnserve -d --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log &
 SVNSERVE_PID=$!
 
-# Trap signals and forward to both child processes
+# Trap signals and forward to child process
 term_handler() {
-  echo "[entrypoint] Caught termination signal, forwarding to children"
-  kill -TERM "$SSHD_PID" "$SVNSERVE_PID" 2>/dev/null
-  wait "$SSHD_PID"
+  echo "[entrypoint] Caught termination signal, forwarding to svnserve"
+  kill -TERM "$SVNSERVE_PID" 2>/dev/null
   wait "$SVNSERVE_PID"
-  echo "[entrypoint] All processes terminated"
+  echo "[entrypoint] svnserve terminated"
   exit 0
 }
 trap term_handler SIGTERM SIGINT
-# Wait for both processes
-wait "$SSHD_PID"
+# Wait for svnserve process
 wait "$SVNSERVE_PID"
 
 echo "[entrypoint] Boot completed"

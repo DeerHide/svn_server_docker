@@ -12,10 +12,4 @@ if ! is_listening 3690; then
   exit 1
 fi
 
-# Check sshd listening
-if ! is_listening 22; then
-  echo "sshd not listening on 22" >&2
-  exit 1
-fi
-
 exit 0
