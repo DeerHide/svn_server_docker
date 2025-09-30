@@ -9,8 +9,6 @@ mkdir -p /var/log/svn
 chmod 755 /var/log/svn || true
 echo "[entrypoint] Runtime directories ready"
 
-
-
 # Ensure home dir perms
 HOME_DIR=${HOME_DIR:-/home/svn}
 echo "[entrypoint] Ensuring home permissions in $HOME_DIR"
@@ -18,7 +16,7 @@ if [ -d "$HOME_DIR" ]; then
   chown -R svn:svn "$HOME_DIR" || true
   chmod 755 "$HOME_DIR" || true
 fi
-echo "[entrypoint] Home permissions ensured"
+echo "[entrypoint] Home permissions ready"
 
 # Seed global Subversion configs into /etc/subversion if bind mount is empty
 echo "[entrypoint] Checking Subversion configuration"
@@ -69,7 +67,6 @@ if [ ! -f "$SUBVERSION_CONF_DIR/passwd" ]; then
 svn = svn
 EOF
 fi
-
 
 echo "[entrypoint] Starting svnserve"
 # Start svnserve in daemon mode but stay in foreground (required: one of -d|-i|-t|-X)
