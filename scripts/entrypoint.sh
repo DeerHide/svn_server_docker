@@ -100,10 +100,9 @@ sanitize_keys() {
 AUTH_KEYS_FILE="$HOME_DIR/.ssh/authorized_keys"
 # Always overwrite with env-provided keys only
 if [ -n "${SSH_AUTHORIZED_KEYS:-}" ]; then
-  # Support comma-separated, newline-separated, and literal \n-separated without corrupting characters
+  # Support newline-separated and literal \n-separated keys without corrupting characters
   printf "%s" "$SSH_AUTHORIZED_KEYS" \
     | sed 's/\\\n/\n/g' \
-    | tr ',' '\n' \
     | sanitize_keys > "$AUTH_KEYS_FILE"
 else
   # Create empty file if no keys provided so sshd can start; warn for visibility
