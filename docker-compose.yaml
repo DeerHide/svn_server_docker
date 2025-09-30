@@ -10,13 +10,11 @@ services:
       - ./svn_data:/home/svn
       - ./svn_config:/etc/subversion
     environment:
-      - SVN_REPO_NAME=my_repo
-      - SVN_REPO_PATH=/home/svn/${SVN_REPO_NAME}
-      - SVN_REPO_URL=file://${SVN_REPO_PATH}
-      # Prefer YAML block scalar to preserve long lines and avoid wrapping
-      - |
-        SSH_AUTHORIZED_KEYS=ssh-ed25519 AAAAC3... svn@anna
-        ssh-ed25519 AAAAC3... svn2@anna2
+      # From .env (auto-loaded by docker compose)
+      # Provide SSH public keys as comma-separated or with literal \n separators
+      - SSH_AUTHORIZED_KEYS=${SSH_AUTHORIZED_KEYS}
+      # Optional: override home directory inside container
+      - HOME_DIR=${HOME_DIR}
     healthcheck:
       test: ["CMD", "/usr/local/bin/healthcheck.sh"]
       interval: 30s
