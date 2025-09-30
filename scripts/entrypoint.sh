@@ -114,9 +114,25 @@ chmod 600 "$AUTH_KEYS_FILE" && chown svn:svn "$AUTH_KEYS_FILE"
 # Start sshd (key-only per config)
 echo "[entrypoint] Starting sshd"
 /usr/sbin/sshd -D -e &
+SSHD_PID=$!
 
-# Start svnserve in daemon mode but stay in foreground (required: one of -d|-i|-t|-X)
 echo "[entrypoint] Starting svnserve"
-exec /usr/bin/svnserve -d --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log
+# Start svnserve in daemon mode but stay in foreground (required: one of -d|-i|-t|-X)
+/usr/bin/svnserve -d --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log &
+SVNSERVE_PID=$!
+
+# Trap signals and forward to both child processes
+term_handler() {
+  echo "[entrypoint] Caught termination signal, forwarding to children"
+  kill -TERM "$SSHD_PID" "$SVNSERVE_PID" 2>/dev/null
+  wait "$SSHD_PID"
+  wait "$SVNSERVE_PID"
+  echo "[entrypoint] All processes terminated"
+  exit 0
+}
+trap term_handler SIGTERM SIGINT
+# Wait for both processes
+wait "$SSHD_PID"
+wait "$SVNSERVE_PID"
 
 echo "[entrypoint] Boot completed"
