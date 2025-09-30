@@ -23,10 +23,9 @@ RUN apt-get update && \
 
 # Stash default Subversion configs for first-run seeding and also place them in /etc/subversion
 RUN mkdir -p /usr/local/share/subversion-defaults
-COPY src/subversion/svnserve.conf /usr/local/share/subversion-defaults/svnserve.conf
-COPY src/subversion/passwd /usr/local/share/subversion-defaults/passwd
-COPY src/subversion/svnserve.conf /etc/subversion/svnserve.conf
-COPY src/subversion/passwd /etc/subversion/passwd
+COPY src/subversion/ /usr/local/share/subversion-defaults/
+COPY src/subversion/ /etc/subversion/
+
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/healthcheck.sh
