@@ -1,24 +1,33 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+echo "[entrypoint] Boot starting"
 
 # Ensure runtime dirs
+echo "[entrypoint] Ensuring runtime directories"
 mkdir -p /run/sshd /var/log/svn
 chmod 755 /run/sshd /var/log/svn || true
+echo "[entrypoint] Runtime directories ready"
 
 # Ensure SSH host keys exist (per-container) and have secure permissions
+echo "[entrypoint] Verifying SSH host keys"
 HOST_KEY_DIR="/etc/ssh"
 if ! ls ${HOST_KEY_DIR}/ssh_host_*_key >/dev/null 2>&1; then
+  echo "[entrypoint] SSH host keys missing; generating"
   ssh-keygen -A
+else
+  echo "[entrypoint] SSH host keys already present"
 fi
 # Enforce secure ownership and permissions
 chown root:root ${HOST_KEY_DIR}/ssh_host_*_key* 2>/dev/null || true
 chmod 600 ${HOST_KEY_DIR}/ssh_host_*_key 2>/dev/null || true
 chmod 644 ${HOST_KEY_DIR}/ssh_host_*_key.pub 2>/dev/null || true
+echo "[entrypoint] SSH host key permissions set"
 
 
 # Ensure home and ssh dir perms
 HOME_DIR=${HOME_DIR:-/home/svn}
+echo "[entrypoint] Ensuring home and SSH permissions in $HOME_DIR"
 if [ -d "$HOME_DIR" ]; then
   chown -R svn:svn "$HOME_DIR" || true
   chmod 755 "$HOME_DIR" || true
@@ -30,8 +39,10 @@ if [ -d "$HOME_DIR" ]; then
     chmod 600 "$HOME_DIR/.ssh/authorized_keys"
   fi
 fi
+echo "[entrypoint] Home and SSH permissions ensured"
 
 # Seed global Subversion configs into /etc/subversion if bind mount is empty
+echo "[entrypoint] Checking Subversion configuration"
 SUBVERSION_CONF_DIR="/etc/subversion"
 SUBVERSION_DEFAULTS_DIR="/usr/local/share/subversion-defaults"
 mkdir -p "$SUBVERSION_CONF_DIR"
@@ -102,7 +113,11 @@ fi
 chmod 600 "$AUTH_KEYS_FILE" && chown svn:svn "$AUTH_KEYS_FILE"
 
 # Start sshd (key-only per config)
+echo "[entrypoint] Starting sshd"
 /usr/sbin/sshd -D -e &
 
 # Start svnserve in daemon mode but stay in foreground (required: one of -d|-i|-t|-X)
+echo "[entrypoint] Starting svnserve"
 exec /usr/bin/svnserve -d --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log
+
+echo "[entrypoint] Boot completed"
