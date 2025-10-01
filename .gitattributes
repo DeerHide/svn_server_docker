@@ -1,4 +1,2 @@
 # Enforce LF line endings in the repository
-* text=auto eol=lf
-*.sh text eol=lf
 * text eol=lf
