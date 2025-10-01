@@ -30,8 +30,7 @@ COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/healthcheck.sh
 
-RUN chmod o-r /etc/subversion/svnserve.conf && \
-    chmod o-r /etc/subversion/passwd && \
+RUN chmod o-r /etc/subversion/* && \
     chown -R svn:svn /etc/subversion && \
     usermod -s /bin/bash svn && \
     echo 'export PS1="svn@svn-server:\\w$ "' >> ${HOME_DIR}/.bashrc && \
