@@ -217,13 +217,6 @@ svn_server_docker/
 │   ├── lib_utils.sh          # Utility functions
 │   ├── login_docker.sh       # Docker authentication
 │   └── login_skopeo.sh       # Skopeo authentication
-├── svn_config/               # Runtime SVN configuration (bind mount)
-│   ├── svnserve.conf         # Active SVN server configuration
-│   └── passwd                # Active users file
-├── svn_data/                 # SVN repositories (bind mount)
-│   ├── hello/                # Sample repository
-│   └── world/                # Sample repository
-├── TODO.md                   # Development tasks and hardening notes
 └── README.md                 # This file
 ```
 
