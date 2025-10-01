@@ -173,13 +173,6 @@ start_svnserve() {
   /usr/bin/svnserve -d --foreground -r "$HOME_DIR" --listen-port 3690 --log-file=/var/log/svn/svnserve.log &
   SVNSERVE_PID=$!
 
-  # Wait a moment and check if process is still running
-  sleep 2
-  if ! kill -0 "$SVNSERVE_PID" 2>/dev/null; then
-    log "Error: svnserve failed to start (PID: $SVNSERVE_PID)"
-    exit 1
-  fi
-
   log "svnserve started with PID: $SVNSERVE_PID"
 }
 
@@ -222,11 +215,6 @@ setup_signal_handlers() {
   trap term_handler SIGTERM SIGINT
 }
 
-wait_for_svnserve() {
-  # Wait for svnserve process
-  wait "$SVNSERVE_PID"
-}
-
 # Main execution flow
 main() {
   log "Boot starting"
@@ -245,7 +233,6 @@ main() {
 
   # Start service
   start_svnserve
-  wait_for_svnserve_ready
   setup_signal_handlers
   wait_for_svnserve
 
