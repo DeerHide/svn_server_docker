@@ -1,0 +1,59 @@
+### authz — path-based ACLs
+### You can scope rules per repository or across them. This file supports:
+###   - [groups] for convenience
+###   - [aliases] for mapping “friendly” names to full usernames
+###   - [repo:/path] sections for fine-grained rules
+
+[aliases]
+# Map a friendly alias to the actual login name (useful with external auth).
+# ci-bot = buildci
+
+[groups]
+# Define your teams here once; reuse everywhere.
+#admins = tom, nakou, zakou, mirage
+#devs   = zakou, mirage
+#qa     = nakou
+
+# ===== Repository-specific rules =====
+# Section header is [REPO_NAME:/path]. If using per-repo authz, you can also just use [/path].
+
+# Root of the repository
+[/]
+# Admins can do anything
+#@admins = rw
+# Developers can read by default; grant write where you want below.
+#@devs   = r
+# QA can read
+#@qa     = r
+# Everyone else gets nothing (blank means no access)
+*       =
+
+# Write access to trunk for devs
+[/trunk]
+#@devs = rw
+
+# Tighten up branches: only branch owners + admins
+[/branches]
+#@admins = rw
+#@devs   = r
+
+# Example: per-branch owner rule
+# Replace BRANCHNAME and OWNER with actual names.
+# [/branches/BRANCHNAME]
+# OWNER   = rw
+# @admins = rw
+# @devs   = r
+
+# Lock down secrets entirely (even reading)
+[/infra/credentials]
+#@admins = rw
+#*       =
+
+# Example of repository-scoped section if using a shared authz across many repos:
+# [repoA:/]
+# @admins = rw
+# *       =
+# [repoB:/]
+# @admins = rw
+# @devs   = r
+# *       =

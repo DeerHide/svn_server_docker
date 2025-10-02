@@ -1,4 +1,6 @@
-
 data
 build
 .env
+todo.md
+svn_data
+svn_config

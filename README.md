@@ -10,7 +10,7 @@ This Docker image provides a complete and secure SVN server ready for production
 
 The image works according to this architecture:
 
-```
+```text
 ┌───────────────────────────────────────┐
 │           Docker Container            │
 │  ┌──────────────────────────────────┐ │
@@ -31,29 +31,36 @@ The image works according to this architecture:
 ## 🚀 Key Features
 
 - **Complete SVN server** with Apache Subversion 1.14.3
+- **SVN protocol support**: Native SVN protocol (port 3690) for repository access
 - **Multi-architecture support**: AMD64 and ARM64 platforms
-- **Enhanced security**: dedicated user, restrictive permissions
-- **Flexible configuration**: externalized configuration files
+- **Enhanced security**: dedicated user, restrictive permissions, secure configuration
+- **Flexible configuration**: externalized configuration files with automatic seeding
+- **Health monitoring**: built-in healthcheck for SVN service
 - **Optimized image**: based on Ubuntu 24.04, reduced size
 - **Production ready**: integrated security and efficiency scans
 
 ## 🏗️ How the image is built
 
 ### 1. Ubuntu 24.04 Base
+
 The image uses Ubuntu 24.04 LTS as base, ensuring stability and long-term support.
 
 ### 2. Multi-Architecture Support
+
 The image is built for multiple architectures:
+
 - **linux/amd64**: Intel/AMD 64-bit processors
 - **linux/arm64**: ARM 64-bit processors (Apple Silicon, ARM servers)
 
 ### 3. Subversion Installation
+
 ```dockerfile
 RUN apt-get update && \
     apt-get install -y --no-install-recommends subversion=1.14.3-1build4
 ```
 
 ### 4. Secure User and Group Management
+
 ```dockerfile
 # Remove default ubuntu user and reuse its UID/GID
 deluser --remove-home ubuntu && \
@@ -62,6 +69,7 @@ adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup 
 ```
 
 ### 5. Permission Configuration
+
 - **User Management**: Reuses UID/GID 1000 from removed ubuntu user
 - **Directory Permissions**: `/home/svn` with 755 permissions (svn:svn ownership)
 - **Security Hardening**: Configuration files with restricted access
@@ -70,9 +78,11 @@ adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup 
 ## 📋 Prerequisites
 
 ### Docker Installation
+
 [See Docker documentation](https://docs.docker.com/get-docker/)
 
 ### Development Tools Installation
+
 ```bash
 ./scripts/install_tools.sh
 ```
@@ -85,7 +95,7 @@ Modify the `manifest.yaml` file according to your needs:
 
 ```yaml
 name: svn_server_docker
-tags: 
+tags:
   - latest
 registry: ghcr.io/deerhide/svn_server_docker
 build:
@@ -112,11 +122,20 @@ build:
 ./scripts/builder.sh
 ```
 
-The script automatically performs:
-- ✅ Containerfile validation with hadolint
-- ✅ Multi-architecture Docker image building (AMD64 + ARM64)
-- ✅ Docker Buildx builder setup
-- ✅ Push to registry with multi-arch manifest
+The script performs:
+
+- ✅ Multi-architecture image builds using Buildah (AMD64 + ARM64)
+- ✅ Saves per-arch images as tar archives for analysis
+- ✅ Filesystem efficiency scans with Dive for each architecture
+- ✅ Pushes per-arch images to the registry with Skopeo
+- ✅ Creates and pushes a multi-arch manifest (Docker manifest)
+
+Notes:
+
+- Hadolint validation is available but disabled by default in the script
+  (uncomment in `scripts/builder.sh` to enable).
+- Trivy vulnerability scanning is installed via `./scripts/install_tools.sh` but
+  disabled by default in the build script (uncomment to enable).
 
 ## 🐳 Usage
 
@@ -145,6 +164,10 @@ docker-compose logs -f
 docker-compose down
 ```
 
+**Environment Variables:**
+
+- `HOME_DIR`: Override the home directory path (default: `/home/svn`)
+
 ### Custom Configuration
 
 ```bash
@@ -156,19 +179,42 @@ docker run -d \
   ghcr.io/deerhide/svn_server_docker:latest
 ```
 
+### SVN Protocol Access
+
+Access repositories using the native SVN protocol:
+
+```bash
+# Clone a repository via SVN protocol
+svn checkout svn://localhost:3690/hello
+
+# Or using full path
+svn checkout svn://localhost:3690/home/svn/hello
+```
+
+**SVN Protocol Configuration:**
+
+- Port: 3690
+- Authentication: SVN built-in authentication (username/password)
+- Protocol: Native SVN protocol for optimal performance
+
 ## 📁 Project Structure
 
-```
+```text
 svn_server_docker/
 ├── Containerfile              # Docker image definition
 ├── manifest.yaml              # Build configuration
 ├── docker-compose.yaml        # Docker Compose orchestration
-├── subversion/                # SVN configuration files
-│   ├── svnserve.conf         # SVN server configuration
-│   └── passwd                # Users file
+├── src/                       # Source configuration files
+│   └── subversion/           # SVN configuration templates
+│       ├── svnserve.conf     # SVN server configuration
+│       └── passwd            # Users file template
 ├── scripts/                   # Utility scripts
 │   ├── builder.sh            # Main build script
+│   ├── entrypoint.sh         # Container entrypoint script
+│   ├── healthcheck.sh        # Health monitoring script
 │   ├── install_tools.sh      # Dependencies installation
+│   ├── launch.sh             # Development launch helper
+│   ├── lib_utils.sh          # Utility functions
 │   ├── login_docker.sh       # Docker authentication
 │   └── login_skopeo.sh       # Skopeo authentication
 └── README.md                 # This file
@@ -200,19 +246,23 @@ user1 = another_password
 ### Development and Testing
 
 **Docker Compose Configuration:**
-- **Port**: 3690 (SVN protocol)
-- **Volume**: `./data:/home/svn` (persistent storage)
-- **Environment**: Pre-configured SVN repository settings
-- **Build**: Uses local Containerfile for development
 
-**Note**: The `./data` directory will be created with correct permissions (1000:1000) automatically by the launch script.
+- **Ports**: 3690 (SVN protocol)
+- **Volumes**:
+  - `./svn_data:/home/svn` (SVN repositories)
+  - `./svn_config:/etc/subversion` (SVN configuration)
+- **Build**: Uses local `Containerfile` for development
+- **Health Check**: Built-in health monitoring for SVN service
+
+**Note**: The `./svn_data` directory can be prepared automatically with correct permissions (1000:1000) by running `./scripts/launch.sh`.
 
 **Development Commands:**
+
 ```bash
 # Start development environment
 docker-compose up -d
 
-# Check container status
+# Check container status and health
 docker-compose ps
 
 # View real-time logs
@@ -221,18 +271,30 @@ docker-compose logs -f svn
 # Access container shell
 docker-compose exec svn bash
 
+# Test SVN access via protocol
+svn checkout svn://localhost:3690/hello
+
 # Stop and clean up
 docker-compose down
 ```
 
 ### Adding Users
 
-1. Modify the `subversion/passwd` file
-2. Rebuild the image: `./scripts/builder.sh`
+**For SVN Protocol Access:**
+
+1. Modify the `svn_config/passwd` file (runtime configuration)
+2. Restart the container: `docker-compose restart`
 
 ### Customizing Configuration
 
-1. Modify files in `subversion/`
+**Runtime Configuration (Recommended):**
+
+1. Modify files in `svn_config/` directory
+2. Restart the container: `docker-compose restart`
+
+**Build-time Configuration:**
+
+1. Modify files in `src/subversion/`
 2. Rebuild the image: `./scripts/builder.sh`
 
 ## 🔒 Security
@@ -244,27 +306,63 @@ docker-compose down
 
 ## 📊 Monitoring
 
+### Health Checks
+
+The container includes built-in health monitoring for the SVN service:
+
+```bash
+# Check container health status
+docker ps
+# Look for "healthy" status in the STATUS column
+
+# Manual health check
+docker exec svn-server /usr/local/bin/healthcheck.sh
+
+# Health check details
+docker inspect svn-server | jq '.[0].State.Health'
+```
+
+**Health Check Configuration:**
+
+- **Interval**: 30 seconds
+- **Timeout**: 5 seconds
+- **Retries**: 3 attempts
+- **Checks**: SVN service (port 3690)
+
 ### Server Logs
 
 ```bash
+# Container logs
 docker logs svn-server
+
+# Follow logs in real-time
+docker logs -f svn-server
+
+# Docker Compose logs
+docker-compose logs -f svn
 ```
 
 ### Detailed Logs
 
 ```bash
+# SVN server logs
 docker exec svn-server cat /var/log/svn/svnserve.log
+
+# System logs
+docker exec svn-server journalctl -f
 ```
 
 ## 🚀 Production Deployment
 
 ### Build Arguments
 
+Build arguments are defined in `manifest.yaml` and passed by the builder script:
+
 ```bash
 # User UID (default: 1000)
 APP_UID=1000
 
-# Group GID (default: 1000) 
+# Group GID (default: 1000)
 APP_GID=1000
 
 # Ubuntu version (default: 24.04)
@@ -297,7 +395,7 @@ SVN_REPO_URL=file://${SVN_REPO_PATH}
 
 ### Data Flow
 
-```
+```text
 SVN Client → Port 3690 → svnserve → Repositories in /home/svn
 ```
 
@@ -344,6 +442,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to:
+
 1. Fork the project
 2. Create a branch for your feature
 3. Commit your changes
@@ -353,6 +452,7 @@ Contributions are welcome! Feel free to:
 ## 📞 Support
 
 For any questions or issues:
+
 - Open an issue on GitHub
 - Check Subversion documentation
 - Check container logs

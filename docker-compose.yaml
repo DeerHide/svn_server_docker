@@ -6,8 +6,13 @@ services:
     ports:
       - 3690:3690
     volumes:
-      - ./data:/home/svn
+      - ./svn_data:/home/svn
+      - ./svn_config:/etc/subversion
     environment:
-      - SVN_REPO_NAME=my_repo
-      - SVN_REPO_PATH=/home/svn/${SVN_REPO_NAME}
-      - SVN_REPO_URL=file://${SVN_REPO_PATH}
+      # Optional: override home directory inside container
+      - HOME_DIR=${HOME_DIR}
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

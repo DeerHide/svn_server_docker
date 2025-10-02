@@ -7,8 +7,8 @@ ARG HOME_DIR=/home/svn
 LABEL org.opencontainers.image.description="Secure Subversion server on Ubuntu 24.04 with multi-user support."
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends subversion=1.14.3-1build4 adduser=3.137ubuntu1 perl=5.38.2-3.2ubuntu0.2 && \
-    deluser --remove-home ubuntu && \
+    apt-get install -y --no-install-recommends subversion adduser perl tini iproute2 && \
+    deluser --remove-home ubuntu || true && \
     addgroup --system --gid ${APP_GID} svn && \
     adduser --system --uid ${APP_UID} --home ${HOME_DIR} --no-create-home --ingroup svn svn && \
     mkdir -p ${HOME_DIR} && \
@@ -21,18 +21,24 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY subversion/svnserve.conf /etc/subversion/svnserve.conf
-COPY subversion/passwd /etc/subversion/passwd
+# Stash default Subversion configs for first-run seeding and also place them in /etc/subversion
+RUN mkdir -p /usr/local/share/subversion-defaults
+COPY src/subversion/ /usr/local/share/subversion-defaults/
+COPY src/subversion/ /etc/subversion/
 
-RUN chmod o-r /etc/subversion/svnserve.conf && \
-    chmod o-r /etc/subversion/passwd && \
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/healthcheck.sh
+
+RUN chmod o-r /etc/subversion/* && \
     chown -R svn:svn /etc/subversion && \
     usermod -s /bin/bash svn && \
-    echo 'export PS1="svn@svn-server:\w$ "' >> ${HOME_DIR}/.bashrc && \
+    echo 'export PS1="svn@svn-server:\\w$ "' >> ${HOME_DIR}/.bashrc && \
     chmod 644 ${HOME_DIR}/.bashrc
 
 USER svn
 
 EXPOSE 3690
 
-CMD ["/usr/bin/svnserve", "-d", "--foreground", "-r", "/home/svn", "--listen-port", "3690", "--log-file=/var/log/svn/svnserve.log"]
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD /usr/local/bin/healthcheck.sh || exit 1
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
